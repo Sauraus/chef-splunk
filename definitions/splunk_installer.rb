@@ -26,9 +26,10 @@ define :splunk_installer, :url => nil do
   remote_file cached_package do
     source params[:url]
     action :create_if_missing
+    not_if { node['splunk']['repo_install'] }
   end
 
-  if %w( omnios ).include?(node['platform'])
+  if node['platform'].eql?('omnios')
     pkgopts = [
       "-a #{cache_dir}/#{params[:name]}-nocheck",
       "-r #{cache_dir}/splunk-response"
@@ -51,14 +52,9 @@ define :splunk_installer, :url => nil do
     end
   end
 
-  local_package_resource = case node['platform_family']
-                           when 'rhel'   then :rpm_package
-                           when 'debian' then :dpkg_package
-                           when 'omnios' then :solaris_package
-                           end
-
-  declare_resource local_package_resource, params[:name] do
-    source cached_package.gsub(/\.Z/, '')
-    options pkgopts.join(' ') if platform?('omnios')
+  package params[:name] do
+    source cached_package.gsub(/\.Z/, '') unless node['splunk']['repo_install']
+    provider Chef::Provider::Package::Dpkg if node['platform_family'].eql?('debian')
+    options pkgopts.join(' ') if node['platform'].eql?('omnios')
   end
 end
