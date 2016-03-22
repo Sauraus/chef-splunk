@@ -23,38 +23,44 @@ define :splunk_installer, :url => nil do
   package_file = splunk_file(params[:url])
   cached_package = ::File.join(cache_dir, package_file)
 
-  remote_file cached_package do
-    source params[:url]
-    action :create_if_missing
-    not_if { node['splunk']['repo_install'] }
-  end
-
-  if node['platform'].eql?('omnios')
-    pkgopts = [
-      "-a #{cache_dir}/#{params[:name]}-nocheck",
-      "-r #{cache_dir}/splunk-response"
-    ]
-
-    execute "uncompress #{cached_package}" do
-      not_if { ::File.exist?("#{cache_dir}/#{package_file.gsub(/\.Z/, '')}") }
+  unless node['splunk']['repo_install']
+    remote_file cached_package do
+      source params[:url]
+      action :create_if_missing
     end
 
-    cookbook_file "#{cache_dir}/#{params[:name]}-nocheck" do
-      source 'splunk-nocheck'
+    if node['platform'].eql?('omnios')
+      pkgopts = [
+          "-a #{cache_dir}/#{params[:name]}-nocheck",
+          "-r #{cache_dir}/splunk-response"
+      ]
+
+      execute "uncompress #{cached_package}" do
+        not_if { ::File.exist?("#{cache_dir}/#{package_file.gsub(/\.Z/, '')}") }
+      end
+
+      cookbook_file "#{cache_dir}/#{params[:name]}-nocheck" do
+        source 'splunk-nocheck'
+      end
+
+      file "#{cache_dir}/splunk-response" do
+        content 'BASEDIR=/opt'
+      end
+
+      execute "usermod -d #{node['splunk']['user']['home']} splunk" do
+        only_if 'grep -q /home/splunk /etc/passwd'
+      end
     end
 
-    file "#{cache_dir}/splunk-response" do
-      content 'BASEDIR=/opt'
-    end
-
-    execute "usermod -d #{node['splunk']['user']['home']} splunk" do
-      only_if 'grep -q /home/splunk /etc/passwd'
-    end
-  end
 
   package params[:name] do
     source cached_package.gsub(/\.Z/, '') unless node['splunk']['repo_install']
     provider Chef::Provider::Package::Dpkg if node['platform_family'].eql?('debian')
     options pkgopts.join(' ') if node['platform'].eql?('omnios')
+  end
+  else
+    package 'splunkforwarder' do
+      action :upgrade
+    end
   end
 end
