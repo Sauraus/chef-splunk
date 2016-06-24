@@ -71,6 +71,7 @@ default['splunk']['server']['runasroot'] = true
 
 default['splunk']['splunk_servers'] = []
 default['splunk']['setup_auth'] = true
+default['splunk']['repo_install'] = false
 
 case node['platform_family']
 when 'rhel', 'fedora'

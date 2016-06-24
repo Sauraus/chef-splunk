@@ -71,6 +71,8 @@ General attributes:
 * `node['splunk']['splunk_servers']`: An alternative to using the Chef server search functionality to discover splunk
   servers.
 * `node['splunk']['setup_auth']`: Allow the client to optionaly not configure auth on a client install.
+* `node['splunk']['repo_install']`: Select installation method, default is to download the package, set this to true to
+  use an OS repository like yum based install method.
 
 The two URL attributes below are selected by platform and architecture
 by default.
